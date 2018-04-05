@@ -7,18 +7,3 @@ according to the tutorial Neural Network And Deep Learning's [Chapter 1][tut1] a
 [tut1]:  http://neuralnetworksanddeeplearning.com/chap1.html
 [tut2]:  http://neuralnetworksanddeeplearning.com/chap2.html
 [mn]:    http://michaelnielsen.org/
-
-## Network Storage Format
-
-```
-uint32 L; // number of layers, at least 3, that is one input layer, one hidden layer and one output layer
-
-struct layer {
-    uint32 ncnt; // number of neurons. 0 for the input layer
-    
-    struct neuron {
-        float32 w[layers[l-1].ncnt]; // weights. number of weights is the number of the neurons of the last layer
-        float32 bias;
-    } neurons[ncnt];
-} layers[L];
-```
