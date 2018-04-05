@@ -15,9 +15,9 @@ uint32 L; // number of layers, at least 3, that is one input layer, one hidden l
 
 struct layer {
     uint32 ncnt; // number of neurons. 0 for the input layer
-                 // number of weights is the number of the neurons of the last layer
+    
     struct neuron {
-        float32 w[layers[l-1].ncnt]; // weights
+        float32 w[layers[l-1].ncnt]; // weights. number of weights is the number of the neurons of the last layer
         float32 bias;
     } neurons[ncnt];
 } layers[L];
