@@ -190,7 +190,7 @@ float calc(float eta) {
         neurons[i][j].gradient[k] = 0.0;
   
   for (imgno = 0; imgno < xcnt; ++imgno, ++lblp, imgp += imgsiz) {
-    if (imgno % 2500) { // draw progressbar
+    if (imgno % 2500) { // redraw progressbar every 2500 samples
       i = (float)imgno/xcnt * 70;
       printf("\rtraining");
       while (i--) printf(".");
