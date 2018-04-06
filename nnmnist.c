@@ -130,6 +130,14 @@ void initneun() {
   }
 }
 
+int getimgsiz() {
+  int a[4]; // magic number, number of images, number of rows, number of columns
+  imgfd = open(IMG, O_RDONLY);
+  read(imgfd, a, sizeof(int)*4);
+  close(imgfd);
+  return toggledn(a[2])*toggledn(a[3]);
+}
+
 void loadimg() {
   imgfd = open(IMG, O_RDONLY);
   imgflen = lseek(imgfd, 0, SEEK_END)+1;
@@ -237,12 +245,12 @@ void dumpntwk() {
   float *p;
   
   for (i = 1; i < L; ++i) {
-    p = (float*)layers[i];
-    printf("   ------ layer %d: %d neurons\n", i, *p++);
+    p = (float*)layers[i] + 1;
+    printf("   ------ layer %d: %d neurons, %d weights per neuron\n", i, ncnt[i], wcnt[i]);
     for (j = 0; j < ncnt[i]; ++j) {
       printf("neuron %d, layer %d: ", j, i);
       for (k = 0; k <= wcnt[i]; ++k) {
-        printf("%.1f ", *p++);
+        printf(".%d ", (int)(10*(*p++)));
       }
       printf("\n");
     }
@@ -262,6 +270,7 @@ int main(int argc, char **argv) {
   if (errno == ENOENT) {
   newfile:
     printf("Creating new network storage in \"%s\"\n", NTWKFN);
+    imgsiz = getimgsiz();
     newntwk();
     goto byebye;
   }
@@ -280,7 +289,7 @@ int main(int argc, char **argv) {
     dumpntwk();
     goto byebye;
   }
-  
+
   loadimg();
   initneun();
   loadlbl();
