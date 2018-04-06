@@ -179,7 +179,7 @@ void freeall() {
   if (imgfd > 0) close(imgfd);
 }
 
-float calc(float eta) {
+float calc(int eta) {
   int imgno, i, j, k;
   float loss = 0.0, f, v;
   struct neuron *n;
@@ -276,12 +276,10 @@ void dumpntwk(char *fmt) {
 int main(int argc, char **argv) {
   int i;
   float loss;
-  float eta = 10.0;
+  unsigned eta = 1000000;
 
-  if (argc == 2 && argv[1][0] == 'e') {
-    sscanf(argv[1]+1, "%f", &eta);
-    printf("eta set to %f from commandline\n", eta);
-  }
+  if (argc == 2 && argv[1][0] == 'e')
+    sscanf(argv[1]+1, "%ld", &eta);
   
   if (argc == 2 && argv[1][0] == 'n') {
     remove(NTWKFN);
