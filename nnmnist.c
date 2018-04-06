@@ -57,7 +57,10 @@ float sigm(float x) {
 
 float dsigm(float x) {
   x = exp(x);
-  return x/(1.0+x)/(1.0+x);
+  x = x/(1.0+x)/(1.0+x);
+  if (isnan(x))
+    x = 0.0;
+  return x;
 }
 
 void newntwk() {
