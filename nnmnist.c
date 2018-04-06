@@ -266,7 +266,13 @@ void dumpntwk(char *fmt) {
 int main(int argc, char **argv) {
   int i;
   float loss;
+  float eta = 10.0;
 
+  if (argc == 2 && argv[1][0] == 'e') {
+    sscanf(argv[1]+1, "%f", &eta);
+    printf("eta set to %f from commandline\n", eta);
+  }
+  
   if (argc == 2 && argv[1][0] == 'n') {
     remove(NTWKFN);
     goto newfile;
@@ -300,7 +306,7 @@ int main(int argc, char **argv) {
   initneun();
   loadlbl();
   printf("%d Training Samples\n", xcnt);
-  loss = calc(1.0);
+  loss = calc(eta);
   printf("Loss: %f\n", loss);
   
  byebye:
