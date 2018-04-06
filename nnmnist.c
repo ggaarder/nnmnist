@@ -246,6 +246,11 @@ float calc(float eta) {
 void dumpntwk(char *fmt) {
   int i, j, k;
   float *p;
+
+  printf("Network: %d Layers\n", L);
+  printf("%5s %6s %7s\n", "", "Neuron", "Weights");
+  for (i = 0; i < L; ++i)
+    printf("%5d %6d %7d\n", i, ncnt[i], wcnt[i]);
   
   for (i = 1; i < L; ++i) {
     p = (float*)layers[i] + 1;
@@ -290,12 +295,7 @@ int main(int argc, char **argv) {
   ntwklen = lseek(ntwkfd, 0, SEEK_END)+1;
   rawntwk = mmap(NULL, ntwklen, PROT_READ|PROT_WRITE, MAP_SHARED, ntwkfd, 0);
   L = *(int*)rawntwk;
-  printf("Network: %d Layers\n", L);
   initntwk();
-
-  printf("%5s %6s %7s\n", "", "Neuron", "Weights");
-  for (i = 0; i < L; ++i)
-    printf("%5d %6d %7d\n", i, ncnt[i], wcnt[i]);
 
   if (argc == 2 && argv[1][0] == 'd') {
     dumpntwk(argv[1]);
