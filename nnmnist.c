@@ -179,10 +179,69 @@ void freeall() {
   if (imgfd > 0) close(imgfd);
 }
 
+void runntwk() {
+  int i, j, k;
+  for (i = 1; i < L; ++i)
+    for (j = 0; j < ncnt[i]; ++j) {
+      neurons[i][j].z = neurons[i][j].arg[wcnt[i]]; // bias
+      for (k = 0; k < wcnt[i]; ++k)
+        neurons[i][j].z += neurons[i][j].arg[k]*neurons[i-1][k].a;
+      neurons[i][j].a = sigm(neurons[i][j].z);
+    }
+}
+
+void backprop() {
+  int i, j, k;
+  struct neuron *n;
+  
+  for (i = 0; i < ncnt[L-1]; ++i) {
+    n = neurons[L-1] + i;
+    n->theta = dsigm(n->z)*2*(n->a - (i == *lblp));
+  }
+
+  for (i = L-2; i > 0; --i)
+    for (j = 0; j < ncnt[i]; ++j) {
+      n = neurons[i] + j;
+      n->theta = 0.0;
+      for (k = 0; k < ncnt[i+1]; ++k)
+        n->theta += neurons[i+1][k].theta * neurons[i+1][k].arg[j];
+      n->theta *= dsigm(n->z);
+    }
+
+  for (i = 1; i < L; ++i)
+    for (j = 0; j < ncnt[i]; ++j) {
+      n = neurons[i] + j;
+      for (k = 0; k < wcnt[i]; ++k)
+        n->gradient[k] += n->theta * neurons[i-1][k].a;
+      n->gradient[wcnt[i]] += n->theta;
+    }  
+}
+
+float calcloss() {
+  int i;
+  float loss = 0.0, f;
+  for (i = 0; i < ncnt[L-1]; ++i) {
+    f = neurons[L-1][i].a - (i == *lblp);
+    loss += f*f;
+  }
+  return loss;
+}
+
+void learn(int eta) {
+  int i, j, k;
+  struct neuron *n;
+  
+  for (i = 1; i < L; ++i)
+    for (j = 0; j < ncnt[i]; ++j) {
+      n = neurons[i] + j;
+      for (k = 0; k <= wcnt[i]; ++k)
+        n->arg[k] -= n->gradient[k]*eta/xcnt;
+    }
+}
+
 float calc(int eta) {
   int imgno, i, j, k;
-  float loss = 0.0, f, v;
-  struct neuron *n;
+  float loss = 0.0;
 
   for (i = 1; i < L; ++i)
     for (j = 0; j < ncnt[i]; ++j)
@@ -198,51 +257,13 @@ float calc(int eta) {
     
     for (i = 0; i < imgsiz; ++i)
       neurons[0][i].a = imgp[i]/255.0;
-    for (i = 1; i < L; ++i)
-      for (j = 0; j < ncnt[i]; ++j) {
-        neurons[i][j].z = neurons[i][j].arg[wcnt[i]]; // bias
-        for (k = 0; k < wcnt[i]; ++k)
-          neurons[i][j].z += neurons[i][j].arg[k]*neurons[i-1][k].a;
-        neurons[i][j].a = sigm(neurons[i][j].z);
-      }
-    v = 0;
-    for (i = 0; i < ncnt[L-1]; ++i) {
-      f = neurons[L-1][i].a - (i == *lblp);
-      v += f*f;
-    }
-    loss += v;
 
-    // backpropagation
-    
-    for (i = 0; i < ncnt[L-1]; ++i) {
-      n = neurons[L-1] + i;
-      n->theta = dsigm(n->z)*2*(n->a - (i == *lblp));
-    }
-
-    for (i = L-2; i > 0; --i)
-      for (j = 0; j < ncnt[i]; ++j) {
-        n = neurons[i] + j;
-        n->theta = 0.0;
-        for (k = 0; k < ncnt[i+1]; ++k)
-          n->theta += neurons[i+1][k].theta * neurons[i+1][k].arg[j];
-        n->theta *= dsigm(n->z);
-      }
-
-    for (i = 1; i < L; ++i)
-      for (j = 0; j < ncnt[i]; ++j) {
-        n = neurons[i] + j;
-        for (k = 0; k < wcnt[i]; ++k)
-          n->gradient[k] += n->theta * neurons[i-1][k].a;
-        n->gradient[wcnt[i]] += n->theta;
-      }
+    runntwk();
+    loss += calcloss();
+    backprop();
   }
 
-  for (i = 1; i < L; ++i)
-    for (j = 0; j < ncnt[i]; ++j) {
-      n = neurons[i] + j;
-      for (k = 0; k <= wcnt[i]; ++k)
-        n->arg[k] -= n->gradient[k]*eta/xcnt;
-    }
+  learn(eta);
 
   putchar('\n');
   return loss/xcnt;
