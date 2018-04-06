@@ -253,6 +253,7 @@ void learn(int eta) {
 }
 
 void ptoutneu() { // print output neurons
+  int i;
   for (i = 0; i < ncnt[L-1]; ++i)
     printf("%.2f ", neurons[L-1][i]);
   putchar('\n');
