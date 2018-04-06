@@ -14,10 +14,10 @@
 int L; // number of layers, at least 3, that is one input layer, one hidden layer and one output layer
 
 struct layer {
-    int ncnt; // number of neurons. 0 for the input layer
+    int ncnt; // number of neurons. <imgsiz> for the input layer
     
     struct neuron {
-      float w[layers[l-1].ncnt]; // weights. number of weights is the number of the neurons of the last layer
+      float w[layers[l-1].ncnt]; // weights. number of weights is the number of the neurons of the last layer. there is no weights in the input layer
       float bias; // specially there is no bias in the input layer
     } neurons[ncnt];
 } layers[L];
@@ -25,13 +25,21 @@ struct layer {
 char *rawntwk = 0;
 int L;
 char **layers = 0; // for convenience
+int *ncnt = 0; // for convenience
+int *wcnt = 0; // for convenience
+
+struct neuron {
+  float a, z, theta,
+    *arg, // point to mmap'd network
+    *gradient; // allocated
+}  **neurons = 0; // for convenience
 
 #define LBL "train-labels.idx1-ubyte"
 #define IMG "train-images.idx3-ubyte"
 char *lbl = 0, *img = 0;
 int imgsiz;
 
-uint32_t toggledn(uint32_t value) { // Change Endianness
+uint32_t toggledn(uint32_t value) { // Change Endianness. My environment is little endianess but the MNIST file is big endianess
     int result = 0;
     result |= (value & 0x000000FF) << 24;
     result |= (value & 0x0000FF00) << 8;
@@ -50,31 +58,21 @@ float dsigm(float x) {
   return x/(1.0+x)/(1.0+x);
 }
 
-int getlbl(int no) { // no starts from 0
-  return (int)lbl[4+4+no+1];
-}
-
-void getimg(int no) { // no starts from 0
-  int i;
-  // for (i = 0; i < imgsiz; ++i)
-    //    a[i] = (float)(int)img[4+4+4+4+imgsiz*no+i];
-}
-
 int main() {
-  int i, wcnt, ncnt, l, n;
-  char *p;
-  float v;
-  int imgfd = 0, lblfd = 0, ntwkfd = 0,
-    imglen, lbllen, xcnt, ntwklen, imgno;
+  int i, j, k, l, n, imgfd = -1, lblfd = -1, ntwkfd = -1, imglen, lbllen, xcnt, ntwklen, imgno;
+  char *p, *imgp, *lblp;
+  float v, f, loss;
 
   imgfd = open(IMG, O_RDONLY);
   imglen = lseek(imgfd, 0, SEEK_END)+1;
-  img = (char*)mmap(NULL, imglen, PROT_READ, MAP_PRIVATE, imgfd, 0);
+  img = mmap(NULL, imglen, PROT_READ, MAP_PRIVATE, imgfd, 0);
   imgsiz = toggledn(*((int*)(img)+2))*toggledn(*((int*)(img)+3));
   printf("Image size: %d\n", imgsiz);
+  imgp = (char*)((int*)img + 4); // skip the magic number, number of images, number of rows and number of cols, pointing to the first image
   
   ntwkfd = open(NTWKFN, O_RDWR);
   if (errno == ENOENT) {
+    int ncnt, wcnt;
     printf("Creating new network storage in \"%s\"\n", NTWKFN);
     ntwkfd = open(NTWKFN, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
 
@@ -103,47 +101,96 @@ int main() {
       for (i = 0; i <= wcnt; ++i) { // together with bias
         v = (float)rand()/RAND_MAX;
         write(ntwkfd, &v, sizeof(float));
-      }    
-        
+      }
+    
     goto byebye;
   }
   
   ntwklen = lseek(ntwkfd, 0, SEEK_END)+1;
-  rawntwk = (char*)mmap(NULL, ntwklen, PROT_READ|PROT_WRITE, MAP_SHARED, ntwkfd, 0);
+  rawntwk = mmap(NULL, ntwklen, PROT_READ|PROT_WRITE, MAP_SHARED, ntwkfd, 0);
   L = *(int*)rawntwk;
   printf("Network: %d Layers\n", L);
 
-  // initializing an array points to each layer for convenience
-  layers = (char**)calloc(L, sizeof(char*));
+  layers = calloc(L, sizeof(char*));
+  ncnt = calloc(L, sizeof(int*));
+  wcnt = calloc(L, sizeof(int*));
   p = rawntwk+sizeof(int); // jumps over L
   layers[0] = p;
-  wcnt = *(int*)p; // wcnt of layer 1, ncnt of layer 0
+  ncnt[0] = *(int*)p; // wcnt of layer 1, ncnt of layer 0
+  wcnt[0] = 0;
   p += sizeof(int); // jumps over the ncnt of layer 0
-                    // now p points to layer 1
+                    // now p points to layer 1  
   for (i = 1; i < L; ++i) {
     layers[i] = p;
-    ncnt = *(int*)p;
+    ncnt[i] = *(int*)p;
+    wcnt[i] = ncnt[i-1];
     p += sizeof(int); // jumps over the ncnt of layer currl
-    p += ncnt*(1+wcnt)*sizeof(float); // jumps over the neurons
-                                      // now points to layer currl+1
-    wcnt = ncnt; // update
+    p += ncnt[i]*(1+wcnt[i])*sizeof(float); // jumps over the neurons
+                                            // now points to layer currl+1
   }
-  
+
+  printf("%5s %6s %7s\n", "", "Neuron", "Weights");
   for (i = 0; i < L; ++i)
-    printf("Layer %d: %d neurons\n", i, *(int*)layers[i]);
+    printf("%5d %6d %7d\n", i, ncnt[i], wcnt[i]);
     
+  neurons = calloc(L, sizeof(struct neuron*));
+  for (i = 0; i < L; ++i) {
+    neurons[i] = calloc(ncnt[i], sizeof(struct neuron));
+    if (i == 0) continue;
+    neurons[i][0].arg = (float*)(layers[i] + sizeof(int));
+    for (j = 0; j < ncnt[i]; ++j) {
+      neurons[i][j].arg = neurons[i][j-1].arg + wcnt[i] + 1;
+      neurons[i][j].gradient = calloc(wcnt[i]+1, sizeof(float));
+    }
+  }
+
   lblfd = open(LBL, O_RDONLY);
   lbllen = lseek(lblfd, 0, SEEK_END)+1;
-  lbl = (char*)mmap(NULL, lbllen, PROT_READ, MAP_PRIVATE, lblfd, 0);
+  lbl = mmap(NULL, lbllen, PROT_READ, MAP_PRIVATE, lblfd, 0);
   xcnt = toggledn(*((int*)lbl+1));
   printf("%d Training Samples\n", xcnt);
+  lblp = (char*)((int*)lbl+2); // skip the magic number and the number of items, pointing to the first label
 
+  loss = 0.0;
+  for (imgno = 0; imgno < xcnt; ++imgno, ++lblp, imgp += imgsiz) {
+    for (i = 0; i < imgsiz; ++i)
+      neurons[0][i].a = imgp[i];
+    for (i = 1; i < L; ++i)
+      for (j = 0; j < ncnt[i]; ++j) {
+        neurons[i][j].z = neurons[i][j].arg[wcnt[i]]; // bias
+        for (k = 0; k < wcnt[i]; ++l)
+          neurons[i][j].z += neurons[i][j].arg[k]*neurons[i-1][k].a;
+        neurons[i][j].a = sigm(neurons[i][j].z);
+      }
+    v = 0;
+    for (i = 0; i < ncnt[L-1]; ++i) {
+      f = neurons[L-1][i].a - (i == toggledn(*lblp));
+      v += f*f;
+    }
+    loss += v/xcnt;
+  }
+
+  printf("Loss: %f\n", loss);
+  
  byebye:
   free(layers);
+  if (neurons) {
+    for (i = 0; i < L; ++i) {
+      if (i != 0)
+        for (j = 0; j < ncnt[i]; ++j)
+          free(neurons[i][j].gradient);
+      free(neurons[i]);
+    }
+    free(neurons);
+  }
+  free(ncnt);
+  free(wcnt);
   if (rawntwk) munmap(rawntwk, ntwklen);
-  if (ntwkfd) close(ntwkfd);
+  if (ntwkfd > 0) close(ntwkfd);
   if (lbl) munmap(lbl, lbllen);
-  if (lblfd) close(lblfd);
+  if (lblfd > 0) close(lblfd);
   if (img) munmap(img, imglen);
-  if (imgfd) close(imgfd);
+  if (imgfd > 0) close(imgfd);
+
+  return EXIT_SUCCESS;
 }
