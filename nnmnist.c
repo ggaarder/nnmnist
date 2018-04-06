@@ -217,8 +217,8 @@ float calc(float eta) {
       for (j = 0; j < ncnt[i]; ++j) {
         n = neurons[i] + j;
         for (k = 0; k < wcnt[i]; ++k)
-          n->gradient[k] -= n->theta * neurons[i-1][k].a;
-        n->gradient[wcnt[i]] -= n->theta;
+          n->gradient[k] += n->theta * neurons[i-1][k].a;
+        n->gradient[wcnt[i]] += n->theta;
       }
   }
 
