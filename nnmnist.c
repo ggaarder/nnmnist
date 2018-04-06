@@ -190,9 +190,11 @@ float calc(float eta) {
         neurons[i][j].gradient[k] = 0.0;
   
   for (imgno = 0; imgno < xcnt; ++imgno, ++lblp, imgp += imgsiz) {
-    i = (float)imgno/xcnt * 70;
-    printf("\rtraining");
-    while (i--) printf(".");
+    if (imgno % 2500) { // draw progressbar
+      i = (float)imgno/xcnt * 70;
+      printf("\rtraining");
+      while (i--) printf(".");
+    }
     
     for (i = 0; i < imgsiz; ++i)
       neurons[0][i].a = imgp[i]/255.0;
