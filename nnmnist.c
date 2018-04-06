@@ -56,7 +56,7 @@ float sigm(float x) {
 }
 
 float dsigm(float x) {
-  x = exp(-x);
+  x = exp(x);
   return x/(1.0+x)/(1.0+x);
 }
 
@@ -109,7 +109,6 @@ void initntwk() {
     layers[i] = p;
     ncnt[i] = *(int*)p;
     wcnt[i] = ncnt[i-1];
-    printf("%f\n", *(float*)(p+sizeof(int)));
     p += sizeof(int); // jumps over the ncnt of the current layer
     p += ncnt[i]*(1+wcnt[i])*sizeof(float); // jumps over the neurons
                                             // now points to layer currl+1
@@ -123,7 +122,7 @@ void initneun() {
     neurons[i] = calloc(ncnt[i], sizeof(struct neuron));
     if (i == 0) continue;
     neurons[i][0].arg = (float*)(layers[i] + sizeof(int));
-    for (j = 0; j < ncnt[i]; ++j) {
+    for (j = 1; j < ncnt[i]; ++j) {
       neurons[i][j].arg = neurons[i][j-1].arg + wcnt[i] + 1;
       neurons[i][j].gradient = calloc(wcnt[i]+1, sizeof(float));
     }
