@@ -123,10 +123,10 @@ void initneun() {
     neurons[i] = calloc(ncnt[i], sizeof(struct neuron));
     if (i == 0) continue;
     neurons[i][0].arg = (float*)(layers[i] + sizeof(int));
-    for (j = 1; j < ncnt[i]; ++j) {
+    for (j = 1; j < ncnt[i]; ++j)
       neurons[i][j].arg = neurons[i][j-1].arg + wcnt[i] + 1;
+    for (j = 0; j < ncnt[i]; ++j)
       neurons[i][j].gradient = calloc(wcnt[i]+1, sizeof(float));
-    }
   }
 }
 
