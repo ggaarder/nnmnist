@@ -240,7 +240,7 @@ float calc(float eta) {
         n->arg[k] -= n->gradient[k]*eta/xcnt;
     }
 
-  return loss;
+  return loss/xcnt;
 }
 
 void dumpntwk(char *fmt) {
