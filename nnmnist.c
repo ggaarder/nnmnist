@@ -217,6 +217,19 @@ void backprop() {
     }  
 }
 
+int getres() {
+  int maxi = -1, i;
+  float maxa = -1.0;
+
+  for (i = 0; i < ncnt[L-1]; ++i)
+    if (neurons[L-1][i].a > maxa) {
+      maxa = neurons[L-1][i].a;
+      maxi = i;
+    }
+
+  return maxa;
+}
+
 float calcloss() {
   int i;
   float loss = 0.0, f;
@@ -239,6 +252,12 @@ void learn(int eta) {
     }
 }
 
+void ptoutneu() { // print output neurons
+  for (i = 0; i < ncnt[L-1]; ++i)
+    printf("%.2f ", neurons[L-1][i]);
+  putchar('\n');
+}
+
 float calc(int eta) {
   int imgno, i, j, k;
   float loss = 0.0;
@@ -259,6 +278,7 @@ float calc(int eta) {
       neurons[0][i].a = imgp[i]/255.0;
 
     runntwk();
+    ptoutneu();
     loss += calcloss();
     backprop();
   }
