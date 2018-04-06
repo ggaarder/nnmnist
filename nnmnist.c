@@ -3,11 +3,10 @@
 #include <unistd.h>
 #include <math.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-#define NTWKFN "ntwkarg" // network arguments storage filename
 
 #if 0
 // Network Storage Format
@@ -18,17 +17,21 @@ struct layer {
     int ncnt; // number of neurons. 0 for the input layer
     
     struct neuron {
-        float w[layers[l-1].ncnt]; // weights. number of weights is the number of the neurons of the last layer
-        float bias;
+      float w[layers[l-1].ncnt]; // weights. number of weights is the number of the neurons of the last layer
+      float bias; // specially there is no bias in the input layer
     } neurons[ncnt];
 } layers[L];
 #endif
+char *rawntwk = 0;
+int L;
+char **layers = 0; // for convenience
 
 #define LBL "train-labels.idx1-ubyte"
 #define IMG "train-images.idx3-ubyte"
-char *lbl, *img;
+char *lbl = 0, *img = 0;
+int imgsiz;
 
-int toggledn(int value) { // Change Endianness
+uint32_t toggledn(uint32_t value) { // Change Endianness
     int result = 0;
     result |= (value & 0x000000FF) << 24;
     result |= (value & 0x0000FF00) << 8;
@@ -53,74 +56,94 @@ int getlbl(int no) { // no starts from 0
 
 void getimg(int no) { // no starts from 0
   int i;
-  for (i = 0; i < h.K; ++i)
-    a[i] = (float)(int)img[4+4+4+4+28*28*no+i];
+  // for (i = 0; i < imgsiz; ++i)
+    //    a[i] = (float)(int)img[4+4+4+4+imgsiz*no+i];
 }
 
 int main() {
-  int ntwkfd = open(NTWKFN, O_RDWR);
-  if (errno == ENOENT) {
-    printf("Creating new network storage at %s\n", NTWKFN);
-    ntwkfd = open(NTFKFN, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
+  int i, wcnt, ncnt, l, n;
+  char *p;
+  float v;
+  int imgfd = 0, lblfd = 0, ntwkfd = 0,
+    imglen, lbllen, xcnt, ntwklen, imgno;
 
-    int L = 4+2;
-    write(fd, &L, sizeof(int));
-    int ncnt = 28*28;
-    write(fd, &ncnt, sizeof(int));
-    int wcnt;
-    int l, n, i;
+  imgfd = open(IMG, O_RDONLY);
+  imglen = lseek(imgfd, 0, SEEK_END)+1;
+  img = (char*)mmap(NULL, imglen, PROT_READ, MAP_PRIVATE, imgfd, 0);
+  imgsiz = toggledn(*((int*)(img)+2))*toggledn(*((int*)(img)+3));
+  printf("Image size: %d\n", imgsiz);
+  
+  ntwkfd = open(NTWKFN, O_RDWR);
+  if (errno == ENOENT) {
+    printf("Creating new network storage in \"%s\"\n", NTWKFN);
+    ntwkfd = open(NTWKFN, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
+
+    L = 4+2;
+    write(ntwkfd, &L, sizeof(int));
+    ncnt = imgsiz;
+    write(ntwkfd, &ncnt, sizeof(int)); // input layer
     srand(time(0));
-    float v;
     
-    for (l = 1; l < L-1; ++l) {
+    for (l = 1; l < L-1; ++l) { // hidden layers
       wcnt = ncnt;
       ncnt = 20;
+      write(ntwkfd, &ncnt, sizeof(int));
       for (n = 0; n < ncnt; ++n)
         for (i = 0; i <= wcnt; ++i) { // together with bias
-          v = (float)rand()/RAND_MAX;
-          write(fd, &v, sizeof(float));
+          v = rand()/RAND_MAX;
+          write(ntwkfd, &v, sizeof(float));
         }
     }
 
+    // output layer
     wcnt = ncnt;
-    ncnt = 10; // recognize 10 digits
+    ncnt = 10; // recognizing 10 digits
+    write(ntwkfd, &ncnt, sizeof(int));
     for (n = 0; n < ncnt; ++n)
       for (i = 0; i <= wcnt; ++i) { // together with bias
-        v = (float)rand()/RAND_MAX;
-        write(fd, &v, sizeof(float));
+        v = rand()/RAND_MAX;
+        write(ntwkfd, &v, sizeof(float));
       }    
         
-    close(ntwkfd);
-    return 0;
+    goto byebye;
   }
-
-  int lblfd = open(LBL, O_RDONLY);
-  int imgfd = open(IMG, O_RDONLY);
-  int lbllen = lseek(lblfd, 0, SEEK_END)+1;
-  int imglen = lseek(imgfd, 0, SEEK_END)+1;
-  lbl = (char*)mmap(NULL, lbllen, PROT_READ, MAP_PRIVATE, lblfd, 0);
-  img = (char*)mmap(NULL, imglen, PROT_READ, MAP_PRIVATE, imgfd, 0);
-
-  int xcnt = toggledn(*(uint32_t*)(lbl+4));
-  printf("%d Training Samples\n", xcnt);
   
-  int imgno;
+  ntwklen = lseek(ntwkfd, 0, SEEK_END)+1;
+  rawntwk = (char*)mmap(NULL, ntwklen, PROT_READ|PROT_WRITE, MAP_SHARED, ntwkfd, 0);
+  L = *(int*)rawntwk;
+  printf("Network: %d Layers\n", L);
 
-  for (imgno = 0; imgno < xcnt; ++imgno) {
-    int i;
-    int l, n, k;
-    
-    for (l = 0; l <= h.L; ++l) {
-      for (n = 0; n < h.N; ++n) {
-        float *zat = z+NEUOFS
-          *zat = *BIAS;
-        for (k = 0; k < h.K; ++k)
-          *zat += (*WEIG)*in[k];
-        a[NEUOFS] = sigm(*zat);
-      }
-    }
+  // initializing an array points to each layer for convenience
+  layers = (char**)calloc(L, sizeof(char*));
+  p = rawntwk+sizeof(int); // jumps over L
+  layers[0] = p;
+  wcnt = *(int*)p; // wcnt of layer 1, ncnt of layer 0
+  p += sizeof(int); // jumps over the ncnt of layer 0
+                    // now p points to layer 1
+  for (i = 1; i < L; ++i) {
+    layers[i] = p;
+    ncnt = *(int*)p;
+    p += sizeof(int); // jumps over the ncnt of layer currl
+    p += ncnt*(1+wcnt)*sizeof(float); // jumps over the neurons
+                                      // now points to layer currl+1
+    wcnt = ncnt; // update
   }
+  
+  for (i = 0; i < L; ++i)
+    printf("Layer %d: %d neurons\n", i, *(int*)layers[i]);
+    
+  lblfd = open(LBL, O_RDONLY);
+  lbllen = lseek(lblfd, 0, SEEK_END)+1;
+  lbl = (char*)mmap(NULL, lbllen, PROT_READ, MAP_PRIVATE, lblfd, 0);
+  xcnt = toggledn(*((int*)lbl+1));
+  printf("%d Training Samples\n", xcnt);
 
-  munmap(lbl, lbllen);
-  munmap(img, imglen);
+ byebye:
+  free(layers);
+  if (rawntwk) munmap(rawntwk, ntwklen);
+  if (ntwkfd) close(ntwkfd);
+  if (lbl) munmap(lbl, lbllen);
+  if (lblfd) close(lblfd);
+  if (img) munmap(img, imglen);
+  if (imgfd) close(imgfd);
 }
