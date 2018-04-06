@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
 #define NTWKFN "ntwkarg"
@@ -185,7 +184,8 @@ float calc(float eta) {
 
   for (i = 1; i < L; ++i)
     for (j = 0; j < ncnt[i]; ++j)
-      memset(neurons[i][j].gradient, 0, sizeof(float)*(wcnt[i]+1));
+      for (k = 0; k <= wcnt[i]; ++k)
+        neurons[i][j].gradient[k] = 0.0;
   
   for (imgno = 0; imgno < xcnt; ++imgno, ++lblp, imgp += imgsiz) {
     if (imgno%10000 == 0) printf("... sample %d\n", imgno);
