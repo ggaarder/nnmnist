@@ -38,7 +38,7 @@ struct neuron {
 
 #define LBL "train-labels.idx1-ubyte"
 #define IMG "train-images.idx3-ubyte"
-char *lbl = 0, *img = 0, *imgp, *lblp;
+unsigned char *lbl = 0, *img = 0, *imgp, *lblp;
 int imgsiz, imgfd = -1, lblsiz, lblfd = -1, ntwkfd = -1, imglen, xcnt, ntwklen;
 
 uint32_t toggledn(uint32_t value) { // Change Endianness. My environment is little endianess but the MNIST file is big endianess
@@ -172,10 +172,12 @@ void freeall() {
 float calc() {
   int imgno, i, j, k;
   float loss = 0.0, f, v;
+  struct neuron *n;
   
   for (imgno = 0; imgno < xcnt; ++imgno, ++lblp, imgp += imgsiz) {
+    if (imgno%10000 == 0) printf("... sample %d\n", imgno);
     for (i = 0; i < imgsiz; ++i)
-      neurons[0][i].a = imgp[i];
+      neurons[0][i].a = imgp[i]/255.0;
     for (i = 1; i < L; ++i)
       for (j = 0; j < ncnt[i]; ++j) {
         neurons[i][j].z = neurons[i][j].arg[wcnt[i]]; // bias
@@ -185,11 +187,36 @@ float calc() {
       }
     v = 0;
     for (i = 0; i < ncnt[L-1]; ++i) {
-      f = neurons[L-1][i].a - (i == toggledn(*lblp));
+      f = neurons[L-1][i].a - (i == *lblp);
       v += f*f;
     }
     loss += v/xcnt;
+
+    // backpropagation
+    
+    for (i = 0; i < ncnt[L-1]; ++i) {
+      n = neurons[L-1] + i;
+      n->theta = dsigm(n->z)*2*(n->a - (i == *lblp));
+    }
+
+    for (i = L-2; i > 0; --i)
+      for (j = 0; j < ncnt[i]; ++j) {
+        n = neurons[i] + j;
+        n->theta = 0.0;
+        for (k = 0; k < ncnt[i+1]; ++k)
+          n->theta += neurons[i+1][k].theta * neurons[i+1][k].arg[j];
+        n->theta *= dsigm(n->z);
+      }
+
+    for (i = 1; i < L-1; ++i)
+      for (j = 0; j < ncnt[i]; ++j) {
+        n = neurons[i] + j;
+        for (k = 0; k < wcnt[i]; ++k)
+          n->arg[k] -= n->theta * neurons[i-1][k].a;
+      }
   }
+
+  return loss;
 }
 
 int main() {
@@ -208,7 +235,6 @@ int main() {
   rawntwk = mmap(NULL, ntwklen, PROT_READ|PROT_WRITE, MAP_SHARED, ntwkfd, 0);
   L = *(int*)rawntwk;
   printf("Network: %d Layers\n", L);
-
   initntwk();
 
   printf("%5s %6s %7s\n", "", "Neuron", "Weights");
@@ -216,11 +242,11 @@ int main() {
     printf("%5d %6d %7d\n", i, ncnt[i], wcnt[i]);
 
   initneun();
-
   loadlbl();
   printf("%d Training Samples\n", xcnt);
   loss = calc();
   printf("Loss: %f\n", loss);
+  
  byebye:
   freeall();
   return EXIT_SUCCESS;
