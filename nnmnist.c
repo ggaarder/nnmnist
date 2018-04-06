@@ -145,7 +145,6 @@ void loadimg() {
   imgflen = lseek(imgfd, 0, SEEK_END)+1;
   img = mmap(NULL, imgflen, PROT_READ, MAP_PRIVATE, imgfd, 0);
   imgsiz = toggledn(*((int*)(img)+2))*toggledn(*((int*)(img)+3));
-  printf("Image size: %d\n", imgsiz);
   imgp = (char*)((int*)img + 4); // skip the magic number, number of images, number of rows and number of cols, pointing to the first image
 }
 
@@ -191,7 +190,10 @@ float calc(float eta) {
         neurons[i][j].gradient[k] = 0.0;
   
   for (imgno = 0; imgno < xcnt; ++imgno, ++lblp, imgp += imgsiz) {
-    if (imgno%10000 == 0) printf("... sample %d\n", imgno);
+    i = (float)imgno/xcnt * 70;
+    printf("\rtraining");
+    while (i--) printf(".");
+    
     for (i = 0; i < imgsiz; ++i)
       neurons[0][i].a = imgp[i]/255.0;
     for (i = 1; i < L; ++i)
@@ -240,6 +242,7 @@ float calc(float eta) {
         n->arg[k] -= n->gradient[k]*eta/xcnt;
     }
 
+  putchar('\n');
   return loss/xcnt;
 }
 
@@ -305,7 +308,6 @@ int main(int argc, char **argv) {
   loadimg();
   initneun();
   loadlbl();
-  printf("%d Training Samples\n", xcnt);
   loss = calc(eta);
   printf("Loss: %f\n", loss);
   
