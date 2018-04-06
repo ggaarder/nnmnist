@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #define NTWKFN "ntwkarg"
@@ -169,10 +170,14 @@ void freeall() {
   if (imgfd > 0) close(imgfd);
 }
 
-float calc() {
+float calc(float eta) {
   int imgno, i, j, k;
   float loss = 0.0, f, v;
   struct neuron *n;
+
+  for (i = 1; i < L; ++i)
+    for (j = 0; j < ncnt[i]; ++j)
+      memset(neurons[i][j].gradient, 0, sizeof(float)*(wcnt[i]+1));
   
   for (imgno = 0; imgno < xcnt; ++imgno, ++lblp, imgp += imgsiz) {
     if (imgno%10000 == 0) printf("... sample %d\n", imgno);
@@ -208,13 +213,21 @@ float calc() {
         n->theta *= dsigm(n->z);
       }
 
-    for (i = 1; i < L-1; ++i)
+    for (i = 1; i < L; ++i)
       for (j = 0; j < ncnt[i]; ++j) {
         n = neurons[i] + j;
         for (k = 0; k < wcnt[i]; ++k)
-          n->arg[k] -= n->theta * neurons[i-1][k].a;
+          n->gradient[k] -= n->theta * neurons[i-1][k].a;
+        n->gradient[wcnt[i]] -= n->theta;
       }
   }
+
+  for (i = 1; i < L; ++i)
+    for (j = 0; j < ncnt[i]; ++j) {
+      n = neurons[i] + j;
+      for (k = 0; k <= wcnt[i]; ++k)
+        n->arg[k] -= n->gradient[k]*eta/xcnt;
+    }
 
   return loss;
 }
@@ -244,7 +257,7 @@ int main() {
   initneun();
   loadlbl();
   printf("%d Training Samples\n", xcnt);
-  loss = calc();
+  loss = calc(1.0);
   printf("Loss: %f\n", loss);
   
  byebye:
