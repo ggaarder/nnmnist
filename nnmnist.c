@@ -195,7 +195,7 @@ float calc(float eta) {
       f = neurons[L-1][i].a - (i == *lblp);
       v += f*f;
     }
-    loss += v/xcnt;
+    loss += v;
 
     // backpropagation
     
@@ -232,13 +232,35 @@ float calc(float eta) {
   return loss;
 }
 
-int main() {
+void dumpntwk() {
+  int i, j, k;
+  float *p;
+  
+  for (i = 1; i < L; ++i) {
+    p = (float*)layers[i];
+    printf("   ------ layer %d: %d neurons\n", i, *p++);
+    for (j = 0; j < ncnt[i]; ++j) {
+      printf("neuron %d, layer %d", j, i);
+      for (k = 0; k <= wcnt[i]; ++k) {
+        printf("%.1f ", *p++);
+      }
+      printf("\n");
+    }
+  }
+}
+
+int main(int argc, char **argv) {
   int i;
   float loss;
-  loadimg();
+
+  if (argc == 2 && argv[1][0] == 'n') {
+    remove(NTWKFN);
+    goto newfile;
+  }
   
   ntwkfd = open(NTWKFN, O_RDWR);
   if (errno == ENOENT) {
+  newfile:
     printf("Creating new network storage in \"%s\"\n", NTWKFN);
     newntwk();
     goto byebye;
@@ -254,6 +276,12 @@ int main() {
   for (i = 0; i < L; ++i)
     printf("%5d %6d %7d\n", i, ncnt[i], wcnt[i]);
 
+  if (argc == 2 && argv[1][0] == 'd') {
+    dumpntwk();
+    goto byebye;
+  }
+  
+  loadimg();
   initneun();
   loadlbl();
   printf("%d Training Samples\n", xcnt);
