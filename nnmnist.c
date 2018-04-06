@@ -90,7 +90,7 @@ int main() {
       write(ntwkfd, &ncnt, sizeof(int));
       for (n = 0; n < ncnt; ++n)
         for (i = 0; i <= wcnt; ++i) { // together with bias
-          v = rand()/RAND_MAX;
+          v = (float)rand()/RAND_MAX;
           write(ntwkfd, &v, sizeof(float));
         }
     }
@@ -101,7 +101,7 @@ int main() {
     write(ntwkfd, &ncnt, sizeof(int));
     for (n = 0; n < ncnt; ++n)
       for (i = 0; i <= wcnt; ++i) { // together with bias
-        v = rand()/RAND_MAX;
+        v = (float)rand()/RAND_MAX;
         write(ntwkfd, &v, sizeof(float));
       }    
         
