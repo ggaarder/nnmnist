@@ -39,7 +39,7 @@ struct neuron {
 #define LBL "train-labels.idx1-ubyte"
 #define IMG "train-images.idx3-ubyte"
 unsigned char *lbl = 0, *img = 0, *imgp, *lblp;
-int imgsiz, imgfd = -1, lblsiz, lblfd = -1, ntwkfd = -1, imglen, xcnt, ntwklen;
+int imgflen, imgfd = -1, lblflen, lblfd = -1, ntwkfd = -1, imgsiz, xcnt, ntwklen;
 
 uint32_t toggledn(uint32_t value) { // Change Endianness. My environment is little endianess but the MNIST file is big endianess
     int result = 0;
@@ -131,8 +131,8 @@ void initneun() {
 
 void loadimg() {
   imgfd = open(IMG, O_RDONLY);
-  imglen = lseek(imgfd, 0, SEEK_END)+1;
-  img = mmap(NULL, imglen, PROT_READ, MAP_PRIVATE, imgfd, 0);
+  imgflen = lseek(imgfd, 0, SEEK_END)+1;
+  img = mmap(NULL, imgflen, PROT_READ, MAP_PRIVATE, imgfd, 0);
   imgsiz = toggledn(*((int*)(img)+2))*toggledn(*((int*)(img)+3));
   printf("Image size: %d\n", imgsiz);
   imgp = (char*)((int*)img + 4); // skip the magic number, number of images, number of rows and number of cols, pointing to the first image
@@ -140,8 +140,8 @@ void loadimg() {
 
 void loadlbl() {
   lblfd = open(LBL, O_RDONLY);
-  lblsiz = lseek(lblfd, 0, SEEK_END)+1;
-  lbl = mmap(NULL, lblsiz, PROT_READ, MAP_PRIVATE, lblfd, 0);
+  lblflen = lseek(lblfd, 0, SEEK_END)+1;
+  lbl = mmap(NULL, lblflen, PROT_READ, MAP_PRIVATE, lblfd, 0);
   xcnt = toggledn(*((int*)lbl+1));
   lblp = (char*)((int*)lbl+2); // skip the magic number and the number of items, pointing to the first label
 }
@@ -163,9 +163,9 @@ void freeall() {
   free(wcnt);
   if (rawntwk) munmap(rawntwk, ntwklen);
   if (ntwkfd > 0) close(ntwkfd);
-  if (lbl) munmap(lbl, lblsiz);
+  if (lbl) munmap(lbl, lblflen);
   if (lblfd > 0) close(lblfd);
-  if (img) munmap(img, imglen);
+  if (img) munmap(img, imgflen);
   if (imgfd > 0) close(imgfd);
 }
 
