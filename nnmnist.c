@@ -240,7 +240,7 @@ void dumpntwk() {
     p = (float*)layers[i];
     printf("   ------ layer %d: %d neurons\n", i, *p++);
     for (j = 0; j < ncnt[i]; ++j) {
-      printf("neuron %d, layer %d", j, i);
+      printf("neuron %d, layer %d: ", j, i);
       for (k = 0; k <= wcnt[i]; ++k) {
         printf("%.1f ", *p++);
       }
