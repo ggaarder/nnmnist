@@ -240,7 +240,7 @@ float calc(float eta) {
   return loss;
 }
 
-void dumpntwk() {
+void dumpntwk(char *fmt) {
   int i, j, k;
   float *p;
   
@@ -250,7 +250,10 @@ void dumpntwk() {
     for (j = 0; j < ncnt[i]; ++j) {
       printf("neuron %d, layer %d: ", j, i);
       for (k = 0; k <= wcnt[i]; ++k) {
-        printf(".%d ", (int)(10*(*p++)));
+        if (fmt[1] == 'a')
+          printf("%.4f ", *p++);
+        else
+          printf(".%d ", (int)(10*(*p++)));
       }
       printf("\n");
     }
@@ -286,7 +289,7 @@ int main(int argc, char **argv) {
     printf("%5d %6d %7d\n", i, ncnt[i], wcnt[i]);
 
   if (argc == 2 && argv[1][0] == 'd') {
-    dumpntwk();
+    dumpntwk(argv[1]);
     goto byebye;
   }
 
