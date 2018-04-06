@@ -5,7 +5,7 @@ all: nnmnist.c
 	tcc $^ -lm -DNTWKFN='"$(NTWKFN)"'
 
 debug: nnmnist.c
-	gcc $^ -lm -g -DNTWKFN='"$(NTWKFN)"' -O0
+	tcc $^ -lm -g -DNTWKFN='"$(NTWKFN)"'
 
 rmdat:
 	rm -f $(NTWKFN)
