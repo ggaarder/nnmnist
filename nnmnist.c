@@ -276,7 +276,7 @@ float calc(int eta) {
     }
     
     for (i = 0; i < imgsiz; ++i)
-      neurons[0][i].a = imgp[i]/255.0;
+      neurons[0][i].a = (float)imgp[i];
 
     runntwk();
     ptoutneu();
