@@ -61,12 +61,19 @@ float dsigm(float x) {
   return x*(1-x);
 }
 
-void newntwk() {
+void newntwk(char *fmt) {
   int ncnt, wcnt, l, n, i;
   float v;
   ntwkfd = open(NTWKFN, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
+
+  if (!fmt || 1 != sscanf(fmt+1, "%d", &L))
+    L = 4+2;
+
+  if (L < 3) {
+    fprintf(stderr, "L must be greater than three\n");
+    return;
+  }
   
-  L = 4+2;
   write(ntwkfd, &L, sizeof(int));
   ncnt = imgsiz;
   write(ntwkfd, &ncnt, sizeof(int)); // input layer
@@ -332,7 +339,7 @@ int main(int argc, char **argv) {
   newfile:
     printf("Creating new network storage in \"%s\"\n", NTWKFN);
     imgsiz = getimgsiz();
-    newntwk();
+    newntwk(argv[1] ? argv[1] : NULL);
     goto byebye;
   }
   
