@@ -67,7 +67,7 @@ void newntwk(char *fmt) {
   ntwkfd = open(NTWKFN, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
 
   if (!fmt || 1 != sscanf(fmt+1, "%d", &L))
-    L = 4+2;
+    L = 3;
 
   if (L < 3) {
     fprintf(stderr, "L must be greater than three\n");
@@ -81,7 +81,7 @@ void newntwk(char *fmt) {
   
   for (l = 1; l < L-1; ++l) { // hidden layers
     wcnt = ncnt;
-    ncnt = 20;
+    ncnt = 30;
     write(ntwkfd, &ncnt, sizeof(int));
     for (n = 0; n < ncnt; ++n)
       for (i = 0; i <= wcnt; ++i) { // together with bias
@@ -324,7 +324,7 @@ void dumpntwk(char *fmt) {
 int main(int argc, char **argv) {
   int i;
   float loss;
-  unsigned eta = 1000000;
+  unsigned eta = 3;
 
   if (argc == 2 && argv[1][0] == 'e')
     sscanf(argv[1]+1, "%ld", &eta);
