@@ -265,7 +265,7 @@ void ptoutneu() { // print output neurons
   putchar('\n');
 }
 
-float calc(int eta) {
+float calc(int eta, char *fmt) {
   int imgno, i, j, k;
   float loss = 0.0;
 
@@ -285,7 +285,7 @@ float calc(int eta) {
       neurons[0][i].a = (float)imgp[i];
 
     runntwk();
-    ptoutneu();
+    if (fmt) ptoutneu();
     loss += calcloss();
     backprop();
   }
@@ -356,7 +356,7 @@ int main(int argc, char **argv) {
   loadimg();
   initneun();
   loadlbl();
-  loss = calc(eta);
+  loss = calc(eta, argc == 3 ? argv[2] : NULL);
   printf("Loss: %f\n", loss);
   
  byebye:
