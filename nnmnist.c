@@ -79,6 +79,7 @@ void newntwk() {
     for (n = 0; n < ncnt; ++n)
       for (i = 0; i <= wcnt; ++i) { // together with bias
         v = (float)rand()/RAND_MAX;
+        if (rand() % 2) v *= -1;
         write(ntwkfd, &v, sizeof(float));
       }
   }
