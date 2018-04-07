@@ -56,11 +56,9 @@ float sigm(float x) {
 }
 
 float dsigm(float x) {
-  x = exp(x);
-  x = x/(1.0+x)/(1.0+x);
-  if (isnan(x))
-    x = 0.0;
-  return x;
+  // if implement it as e^x / (1+e^x)^2, e^x may overflow
+  x = sigm(x);
+  return x*(1-x);
 }
 
 void newntwk() {
