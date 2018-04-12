@@ -1,7 +1,7 @@
 # nnmnist
 
 A Neural Network based single-digit OCR, using the [MNIST dataset][mnist],
-according to the tutorial Neural Network And Deep Learning's [Chapter 1][tut1] and [Chapter 2][tut2] written by [Michael Nielsen][mn] in Dec 2017.
+according to the free online tutorial Neural Network And Deep Learning's [Chapter 1][tut1] and [Chapter 2][tut2] written by [Michael Nielsen][mn] in 2015.
 
 [mnist]: http://yann.lecun.com/exdb/mnist/index.html
 [tut1]:  http://neuralnetworksanddeeplearning.com/chap1.html
